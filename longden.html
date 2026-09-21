@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Cơn Mưa Hoa Đăng</title>
+  <title>lồng đèn</title>
   <style>
     :root {
       --accent: #ffb86b;
@@ -32,7 +32,6 @@
       touch-action: none;
     }
 
-    /* ===== UI Overlay ===== */
     .ui-layer {
       position: fixed;
       inset: 0;
@@ -85,7 +84,6 @@
       opacity: 1;
     }
 
-    /* Music toggle */
     .music-btn {
       position: fixed;
       top: 16px;
@@ -119,7 +117,6 @@
       opacity: 0.65;
     }
 
-    /* ===== Photo Popup ===== */
     .photo-popup {
       position: fixed;
       inset: 0;
@@ -166,6 +163,8 @@
       border-radius: 16px;
       user-select: none;
       -webkit-user-drag: none;
+      opacity: 0;
+      transition: opacity 0.35s ease;
     }
 
     .photo-close {
@@ -189,7 +188,6 @@
       transform: scale(1.08);
     }
 
-    /* ===== Heart VIP Trigger ===== */
     .heartvip-stem {
       position: fixed;
       left: 50%;
@@ -312,7 +310,6 @@
       100% { opacity: 0; transform: scale(1.5); }
     }
 
-    /* Credit nhỏ */
     .credit {
       position: fixed;
       right: 12px;
@@ -333,8 +330,8 @@
   <canvas id="c"></canvas>
 
   <div class="ui-layer">
-    <div class="progress-badge" id="progressBadge">Đã mở 0/8</div>
-    <div class="photo-hint" id="photoHint">Nhấn vào các lồng đèn để mở kỷ niệm ✨</div>
+    <div class="progress-badge" id="progressBadge">Đã mở 0/7</div>
+    <div class="photo-hint" id="photoHint">Nhấn vào các lồng đèn để mở bất ngờ</div>
   </div>
 
   <button class="music-btn" id="musicBtn" type="button" aria-label="Bật/tắt nhạc" title="Bật/tắt nhạc">♪</button>
@@ -350,6 +347,8 @@
   <button class="heartvip-trigger" id="heartVipTrigger" type="button" aria-label="Mở trái tim yêu thương">❤</button>
   <div class="heartvip-hint" aria-live="polite">Bấm vào trái tim nhé 💗</div>
 
+  <div class="credit">Cơn Mưa Hoa Đăng</div>
+
   <script>
     // ===================== CONFIG =====================
     const CONFIG = {
@@ -357,7 +356,7 @@
       Z_MIN: 0.1,
       Z_MAX: 2.0,
       NEEDED_CLICKS: 8,
-      FORMATION_DURATION: 4800,   // ms
+      FORMATION_DURATION: 4800,
       HEART_PARTICLES: window.matchMedia('(max-width: 768px)').matches ? 14 : 22,
       LANTERN_COUNT: window.matchMedia('(max-width: 768px)').matches ? 70 : 105,
       GIRL_NAME: 'Em'
@@ -370,7 +369,7 @@
     let H = canvas.height = innerHeight;
 
     // ===================== STATE =====================
-    let skyPhase = 'rain';          // rain | slowing | pause | forming | heart
+    let skyPhase = 'rain';
     let motionScale = 1;
     let formationStartedAt = 0;
     let formationTargets = [];
@@ -380,16 +379,17 @@
     let isMuted = false;
 
     // ===================== DOM =====================
-    const photoPopup   = document.getElementById('photoPopup');
-    const memoryPhoto  = document.getElementById('memoryPhoto');
-    const photoClose   = document.getElementById('photoClose');
-    const photoHint    = document.getElementById('photoHint');
-    const progressBadge= document.getElementById('progressBadge');
+    const photoPopup    = document.getElementById('photoPopup');
+    const memoryPhoto   = document.getElementById('memoryPhoto');
+    const photoClose    = document.getElementById('photoClose');
+    const photoHint     = document.getElementById('photoHint');
+    const progressBadge = document.getElementById('progressBadge');
     const heartVipTrigger = document.getElementById('heartVipTrigger');
-    const heartVipStem = document.getElementById('heartVipStem');
-    const musicBtn     = document.getElementById('musicBtn');
-    const audio        = document.getElementById('bgMusic');
+    const heartVipStem  = document.getElementById('heartVipStem');
+    const musicBtn      = document.getElementById('musicBtn');
+    const audio         = document.getElementById('bgMusic');
 
+    // ===================== 8 ẢNH =====================
     const memoryImages = [
       'anh/anh1.jpg',
       'anh/anh2.jpg',
@@ -400,7 +400,12 @@
       'anh/anh7.jpg',
       'anh/anh8.jpg',
     ];
-    const fallbackPhoto = 'image/lantern.svg';
+
+    // Preload tất cả ảnh để tránh flash trên mobile
+    memoryImages.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
 
     // ===================== UTILS =====================
     function rand(a, b) { return a + Math.random() * (b - a); }
@@ -455,7 +460,6 @@
       const radius = Math.min(W, H) * 0.22;
       const t = performance.now() * 0.0014;
 
-      // Soft glow
       const glow = ctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius * 1.55);
       glow.addColorStop(0, 'rgba(255, 182, 193, 0.32)');
       glow.addColorStop(0.45, 'rgba(255, 153, 189, 0.14)');
@@ -463,7 +467,6 @@
       ctx.fillStyle = glow;
       ctx.fillRect(cx - radius * 1.7, cy - radius * 1.7, radius * 3.4, radius * 3.4);
 
-      // Heart outline
       ctx.beginPath();
       ctx.moveTo(cx, cy + radius * 0.55);
       for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.09) {
@@ -479,7 +482,6 @@
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Particles
       for (const p of heartParticles) {
         p.x += p.vx;
         p.y += p.vy;
@@ -672,7 +674,6 @@
         ctx.translate(px, py);
         ctx.rotate(this.rotation);
 
-        // Glow
         const gR = s * (2.3 + glowFactor * this.glow);
         const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, gR);
         grd.addColorStop(0, hexToRgba(this.color, 0.22 * this.alpha));
@@ -683,7 +684,6 @@
         ctx.arc(0, 0, gR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body
         const w = s * 0.78;
         const h = s * 1.02;
         const bodyAlpha = Math.max(0.56, this.alpha * (1 - (this.z - CONFIG.Z_MIN) / (CONFIG.Z_MAX - CONFIG.Z_MIN)));
@@ -696,7 +696,6 @@
         ctx.strokeStyle = 'rgba(55, 24, 15, 0.7)';
         ctx.stroke();
 
-        // Ribs
         ctx.globalAlpha = 0.16 * this.alpha;
         for (let i = -2; i <= 2; i++) {
           const ix = (i / 3) * w * 0.68;
@@ -708,7 +707,6 @@
           ctx.stroke();
         }
 
-        // Flame
         ctx.globalAlpha = 1;
         const flameY = h * 0.11;
         const flameH = s * 0.26;
@@ -782,7 +780,6 @@
       const breathe = 1 + 0.055 * Math.sin(performance.now() * 0.00075);
       ctx.save();
 
-      // Haze
       const haze = R * 4.6 * breathe;
       const hazeG = ctx.createRadialGradient(moonX, moonY, R * 0.25, moonX, moonY, haze);
       hazeG.addColorStop(0, 'rgba(255,252,230,0.09)');
@@ -793,7 +790,6 @@
       ctx.arc(moonX, moonY, haze, 0, Math.PI * 2);
       ctx.fill();
 
-      // Glow
       const glowR = R * 2.8 * breathe;
       const glowG = ctx.createRadialGradient(moonX, moonY, R * 0.45, moonX, moonY, glowR);
       glowG.addColorStop(0, 'rgba(255,250,235,0.42)');
@@ -805,7 +801,6 @@
       ctx.arc(moonX, moonY, glowR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Corona
       const coronaR = R * 1.5 * breathe;
       const coronaG = ctx.createRadialGradient(moonX, moonY, R * 0.75, moonX, moonY, coronaR);
       coronaG.addColorStop(0, 'rgba(255,253,240,0.5)');
@@ -816,7 +811,6 @@
       ctx.arc(moonX, moonY, coronaR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Body
       ctx.save();
       ctx.beginPath();
       ctx.arc(moonX, moonY, R, 0, Math.PI * 2);
@@ -875,7 +869,6 @@
         ctx.globalAlpha = 1;
       }
 
-      // Terminator + edge
       const termG = ctx.createLinearGradient(moonX - R, moonY, moonX + R, moonY);
       termG.addColorStop(0, 'rgba(0,0,0,0)');
       termG.addColorStop(0.72, 'rgba(0,0,0,0)');
@@ -892,9 +885,8 @@
 
       ctx.restore();
 
-      // Specular
       ctx.globalAlpha = 0.32;
-      const specG = ctx.createRadialGradient(moonX - R * 0.28, moonY - R * 0.28, 0, moonX - R * 0.28, moonY - R * 0.28, R * 0.55);
+      const specG = ctx.createRadialGradient(moonX - R * 0.28, moonY - R * 0.28, 0, moonX - R * 0.28, moonY - R * 0.22, R * 0.55);
       specG.addColorStop(0, 'rgba(255,255,255,0.55)');
       specG.addColorStop(0.5, 'rgba(255,255,255,0.08)');
       specG.addColorStop(1, 'rgba(255,255,255,0)');
@@ -925,7 +917,7 @@
     // ===================== MAIN LOOP =====================
     function update() {
       const now = performance.now();
-      const dt = Math.min((now - LAST) * 0.06, 2.5); // clamp dt
+      const dt = Math.min((now - LAST) * 0.06, 2.5);
       LAST = now;
 
       ctx.fillStyle = '#02040a';
@@ -933,7 +925,6 @@
 
       drawMoon();
 
-      // Sort only when needed (depth changes slowly)
       if (skyPhase === 'rain' || skyPhase === 'slowing') {
         lanterns.sort((a, b) => a.z - b.z);
       }
@@ -955,22 +946,28 @@
     }
     requestAnimationFrame(update);
 
-    // ===================== PHOTO =====================
-    memoryPhoto.onerror = () => {
-      if (memoryPhoto.dataset.fallback === '1') return;
-      memoryPhoto.dataset.fallback = '1';
-      memoryPhoto.src = fallbackPhoto;
-      memoryPhoto.alt = 'Hình ảnh kỷ niệm';
-    };
+    // ===================== PHOTO (đã sửa flash trên mobile) =====================
     memoryPhoto.onload = () => {
-      memoryPhoto.dataset.fallback = '0';
+      memoryPhoto.style.opacity = '1';
+    };
+
+    memoryPhoto.onerror = () => {
+      console.warn('Không load được ảnh:', memoryPhoto.src);
+      // Không tự động chuyển sang ảnh lồng đèn nữa để tránh flash
     };
 
     function openNextPhoto() {
       if (!memoryImages.length) return;
-      memoryPhoto.dataset.fallback = '0';
-      memoryPhoto.src = memoryImages[currentPhotoIndex];
-      currentPhotoIndex = (currentPhotoIndex + 1) % memoryImages.length;
+
+      // Ẩn ảnh trước khi đổi src
+      memoryPhoto.style.opacity = '0';
+
+      // Đợi transition rồi mới gán src mới
+      setTimeout(() => {
+        memoryPhoto.src = memoryImages[currentPhotoIndex];
+        currentPhotoIndex = (currentPhotoIndex + 1) % memoryImages.length;
+      }, 40);
+
       photoPopup.classList.add('show');
       photoPopup.setAttribute('aria-hidden', 'false');
     }
@@ -978,6 +975,9 @@
     function closePhoto() {
       photoPopup.classList.remove('show');
       photoPopup.setAttribute('aria-hidden', 'true');
+      setTimeout(() => {
+        memoryPhoto.style.opacity = '0';
+      }, 300);
     }
 
     photoClose.addEventListener('click', e => {
@@ -1026,7 +1026,6 @@
         }
       }
 
-      // Music autoplay on first interaction
       if (!musicPlayed && audio) {
         audio.play().then(() => {
           musicPlayed = true;
@@ -1043,12 +1042,10 @@
       }
     }, { passive: true });
 
-    // Heart button
     heartVipTrigger.addEventListener('click', () => {
       window.location.href = 'heartvip/index.html';
     });
 
-    // Music toggle
     musicBtn.addEventListener('click', () => {
       if (!audio) return;
       if (!musicPlayed) {
@@ -1078,6 +1075,8 @@
         }
       }, 120);
     });
+
+    console.log('Cơn Mưa Hoa Đăng — 8 ảnh sẵn sàng.');
   </script>
 </body>
 </html>
